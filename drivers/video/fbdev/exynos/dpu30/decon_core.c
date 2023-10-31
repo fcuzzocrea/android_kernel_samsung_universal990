@@ -1982,6 +1982,13 @@ static int decon_check_buffer_size(struct decon_device *decon,
 	return ret;
 }
 
+static bool is_decon_win_state_vrr(struct decon_device *decon,
+		int state)
+{
+	return ((state == DECON_WIN_STATE_VRR_NORMALMODE) ||
+		(state == DECON_WIN_STATE_VRR_HSMODE));
+}
+
 static int decon_set_win_buffer(struct decon_device *decon,
 		struct decon_win_config *config,
 		struct decon_reg_data *regs, int idx)
@@ -3193,9 +3200,14 @@ static void decon_update_regs(struct decon_device *decon,
 			if (decon->lcd_info->fps != regs->fps)
 				notify_fps_change(regs->fps);
 #endif
-			dsim = container_of(decon->out_sd[0], struct dsim_device, sd);
-			dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_SET_VREFRESH,
-					&(regs->fps));
+            if (regs->fps != 0) {
+				if (decon->lcd_info->fps != regs->fps)
+				    dpu_set_vrr_config
+					dpu_update_fps(decon, regs->fps);
+		}
+			//dsim = container_of(decon->out_sd[0], struct dsim_device, sd);
+			//dsim_call_panel_ops(dsim, EXYNOS_PANEL_IOC_SET_VREFRESH,
+			//		&(regs->fps));
 		} else {
 			if ((decon->dt.psr_mode == DECON_MIPI_COMMAND_MODE) &&
 					(decon->dt.trig_mode == DECON_HW_TRIG)) {
@@ -3898,7 +3910,6 @@ add_new_regs:
 			__func__, win_data->extra.remained_frames);
 	}
 
-
 	mutex_unlock(&decon->up.lock);
 
 	regs->idx = decon->wc_idx;
@@ -3919,6 +3930,10 @@ add_new_regs:
 	if (num_of_window)
 		fd_install(win_data->retire_fence, sync_ifile->file);
 
+	/*
+	 * HWC 2.4 requires in case of resolution change
+	 * that dpu driver operates in blocking mode.
+	 */
 	if (decon->mres_enabled &&
 			(win_data->config[DECON_WIN_UPDATE_IDX].state == DECON_WIN_STATE_MRESOL) &&
 			((win_data->config[DECON_WIN_UPDATE_IDX].dst.f_w != decon->lcd_info->xres) ||
@@ -3929,6 +3944,11 @@ add_new_regs:
 		decon_dbg("MRESOL: flush up.worker -\n");
 	}
 
+#ifdef CONFIG_EXYNOS_SET_ACTIVE_WITH_EMPTY_WINDOW
+	if (is_decon_win_state_vrr(decon, win_data->config[DECON_WIN_UPDATE_IDX].state) &&
+		(win_data->fps != 0) && (decon->lcd_info->fps != win_data->fps))
+		kthread_flush_worker(&decon->up.worker);
+#endif
 	mutex_unlock(&decon->lock);
 	decon_systrace(decon, 'C', "decon_win_config", 0);
 

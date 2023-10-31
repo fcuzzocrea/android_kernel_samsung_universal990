@@ -1413,11 +1413,11 @@ int decon_exit_hiber(struct decon_device *decon)
 	struct decon_param p;
 	struct decon_mode_info psr;
 	enum decon_state prev_state = decon->state;
-#ifdef CONFIG_PROFILE_WINCONFIG
+/*#ifdef CONFIG_PROFILE_WINCONFIG
 	s64 hiber_lock_time;
 	s64 hiber_dsim_time;
 	s64 hiber_exit_time;
-#endif
+#endif*/
 	DPU_EVENT_START();
 
 	if (!decon->hiber.enabled)
@@ -1432,7 +1432,7 @@ int decon_exit_hiber(struct decon_device *decon)
 		kthread_flush_worker(&decon->hiber.worker);
 
 	mutex_lock(&decon->hiber.lock);
-
+/*
 #ifdef CONFIG_PROFILE_WINCONFIG
 	hiber_lock_time = GET_HIBER_TIME(decon);
 	if (hiber_lock_time > TIME_HIBER_LOCK) {
@@ -1440,7 +1440,7 @@ int decon_exit_hiber(struct decon_device *decon)
 			__func__, hiber_lock_time);
 	}
 #endif
-
+*/
 	if (decon->state != DECON_STATE_HIBER)
 		goto err;
 
@@ -1451,7 +1451,7 @@ int decon_exit_hiber(struct decon_device *decon)
 		decon_err("%s decon-%d failed to set subdev EXIT_ULPS state\n",
 				__func__, decon->id);
 	}
-
+/*
 #ifdef CONFIG_PROFILE_WINCONFIG
 	hiber_dsim_time = GET_HIBER_TIME(decon) - hiber_lock_time;
 	if (hiber_dsim_time > TIME_HIBER_DSIM) {
@@ -1459,7 +1459,7 @@ int decon_exit_hiber(struct decon_device *decon)
 			__func__, hiber_dsim_time);
 	}
 #endif
-
+*/
 	decon_to_init_param(decon, &p);
 	decon_reg_init(decon->id, decon->dt.out_idx[0], &p);
 #if defined(CONFIG_EXYNOS_DECON_DQE)
@@ -1504,7 +1504,7 @@ int decon_exit_hiber(struct decon_device *decon)
 	}
 #endif
 	decon_hiber_finish(decon);
-
+/*
 #ifdef CONFIG_PROFILE_WINCONFIG
 	hiber_exit_time = GET_HIBER_TIME(decon);
 	if (hiber_exit_time > TIME_HIBER_EXIT) {
@@ -1512,7 +1512,7 @@ int decon_exit_hiber(struct decon_device *decon)
 			__func__, hiber_exit_time);
 	}
 #endif
-
+*/
 err:
 	decon_hiber_unblock(decon);
 	mutex_unlock(&decon->hiber.lock);
